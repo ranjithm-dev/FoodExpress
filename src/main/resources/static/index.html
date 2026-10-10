@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodExpress | Gourmet Online Food Ordering</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Razorpay Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- TOP ANNOUNCEMENT BANNER -->
+  <div class="bg-gradient-to-r from-amber-500 via-brand-500 to-rose-500 text-white text-xs sm:text-sm py-2 px-4 text-center font-medium shadow-sm flex items-center justify-center gap-2">
+    <span>🔥 Super Weekend Offer: Use code <strong class="underline decoration-wavy cursor-pointer" onclick="quickApplyCoupon('WELCOME50')">WELCOME50</strong> for 50% OFF! Free delivery above $35!</span>
+  </div>
+
+  <!-- NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 transition-all duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <a href="#" onclick="showSection('menu'); return false;" class="flex items-center gap-3 group">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
+          <i class="fa-solid fa-fire text-2xl animate-pulse"></i>
+        </div>
+        <div>
+          <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 to-brand-700 bg-clip-text text-transparent">FoodExpress</span>
+          <span class="block text-[10px] font-semibold tracking-wider text-brand-600 uppercase">Gourmet & Fast</span>
+        </div>
+      </a>
+
+      <!-- Search Bar -->
+      <div class="hidden md:flex flex-1 max-w-md mx-4 relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input type="text" id="searchInput" placeholder="Search truffle burgers, ramen, artisan pizza..." 
+          class="w-full pl-10 pr-4 py-2.5 rounded-full border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+          oninput="handleSearch(this.value)">
+      </div>
+
+      <!-- Action Nav Items -->
+      <div class="flex items-center gap-3">
+        <!-- Switch View: Customer / Admin -->
+        <button id="adminToggleBtn" onclick="toggleAdminView()" 
+          class="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 hover:border-brand-400 bg-white text-slate-700 hover:text-brand-600 shadow-sm flex items-center gap-1.5 transition-all">
+          <i class="fa-solid fa-utensils text-brand-500"></i>
+          <span id="adminToggleText">Restaurant Portal</span>
+        </button>
+
+        <!-- Order History / Track -->
+        <button onclick="showSection('tracking')" 
+          class="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-slate-700 hover:text-slate-900 shadow-sm flex items-center gap-1.5 transition-all">
+          <i class="fa-solid fa-truck-fast text-amber-500"></i>
+          <span class="hidden sm:inline">Track Order</span>
+        </button>
+
+        <!-- User Account / Sign In -->
+        <div id="userNavContainer" class="flex items-center">
+          <button id="userAuthBtn" onclick="openAuthModal()" 
+            class="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-slate-700 hover:text-slate-900 shadow-sm flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-circle-user text-slate-500 text-sm"></i>
+            <span id="userAuthLabel" class="hidden sm:inline">Sign In</span>
+          </button>
+        </div>
+
+        <!-- Cart Button -->
+        <button onclick="toggleCartDrawer(true)" 
+          class="relative bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <i class="fa-solid fa-bag-shopping"></i>
+          <span class="hidden sm:inline">Cart</span>
+          <span id="cartCountBadge" class="bg-white text-brand-600 text-xs font-black px-2 py-0.5 rounded-full shadow-sm">0</span>
+          <span id="cartTotalNav" class="hidden sm:inline text-xs font-bold text-orange-100 border-l border-brand-400/50 pl-2">$0.00</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Search bar -->
+    <div class="md:hidden px-4 pb-3">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input type="text" placeholder="Search dishes, burgers, noodles..." 
+          class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+          oninput="handleSearch(this.value)">
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ================= CUSTOMER VIEW ================= -->
+    <div id="customerSection">
+      
+      <!-- HERO BANNER -->
+      <section class="relative rounded-3xl overflow-hidden bg-slate-900 text-white shadow-xl mb-10">
+        <div class="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-overlay" 
+             style="background-image: url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80');"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent"></div>
+        
+        <div class="relative z-10 px-6 sm:px-12 py-12 sm:py-16 max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-xs font-semibold mb-4 backdrop-blur-md">
+            <i class="fa-solid fa-clock"></i> Average delivery: 25 - 35 mins
+          </div>
+          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white mb-4">
+            Flavors Delivered <br>
+            <span class="bg-gradient-to-r from-amber-400 to-brand-400 bg-clip-text text-transparent">Hot, Fresh & Fast</span>
+          </h1>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+            Handcrafted burgers, stone-baked pizzas, aromatic ramen, and artisan desserts made to order with organic, locally sourced ingredients.
+          </p>
+
+          <!-- Available Coupons Chips -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs text-slate-400 font-semibold mr-1">Coupons:</span>
+            <button onclick="quickApplyCoupon('WELCOME50')" class="coupon-chip group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-medium text-amber-300 transition-all">
+              <i class="fa-solid fa-tag text-[10px]"></i>
+              <span class="font-mono font-bold">WELCOME50</span>
+              <span class="text-[10px] text-slate-300">(50% OFF)</span>
+            </button>
+            <button onclick="quickApplyCoupon('FEAST20')" class="coupon-chip group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-medium text-amber-300 transition-all">
+              <i class="fa-solid fa-tag text-[10px]"></i>
+              <span class="font-mono font-bold">FEAST20</span>
+              <span class="text-[10px] text-slate-300">(20% OFF)</span>
+            </button>
+            <button onclick="quickApplyCoupon('FLAT10')" class="coupon-chip group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-medium text-amber-300 transition-all">
+              <i class="fa-solid fa-tag text-[10px]"></i>
+              <span class="font-mono font-bold">FLAT10</span>
+              <span class="text-[10px] text-slate-300">($10 OFF)</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CATEGORY PILLS & FILTERS -->
+      <section class="mb-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <!-- Category Tabs -->
+          <div id="categoryTabs" class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            <button onclick="selectCategory(null)" 
+              class="cat-pill active flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap bg-brand-500 text-white shadow-sm shadow-brand-500/20"
+              data-cat-id="all">
+              <span>🍽️</span> All Items
+            </button>
+            <!-- Loaded dynamically -->
+          </div>
+
+          <!-- Diet & Sorting Filter Controls -->
+          <div class="flex items-center gap-3 shrink-0">
+            <!-- Veg toggle -->
+            <button id="vegFilterBtn" onclick="toggleVegFilter()" 
+              class="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:border-emerald-500 flex items-center gap-2 transition-all">
+              <span class="w-3 h-3 rounded-full border border-emerald-600 flex items-center justify-center p-0.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+              </span>
+              <span>Pure Veg Only</span>
+            </button>
+
+            <!-- Popular Only -->
+            <button id="popularFilterBtn" onclick="togglePopularFilter()" 
+              class="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:border-amber-500 flex items-center gap-1.5 transition-all">
+              <i class="fa-solid fa-star text-amber-400 text-xs"></i>
+              <span>Popular</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- MENU GRID -->
+      <section>
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 id="menuSectionTitle" class="text-xl sm:text-2xl font-bold text-slate-900">Explore Our Menu</h2>
+            <p id="menuItemCountText" class="text-xs text-slate-500 mt-0.5">Showing delicious dishes</p>
+          </div>
+        </div>
+
+        <!-- Items Container -->
+        <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+          <!-- Populated by JavaScript -->
+          <div class="col-span-full py-16 text-center text-slate-400">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3 text-brand-500"></i>
+            <p>Loading chef's specials...</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+
+    <!-- ================= LIVE TRACKING SECTION ================= -->
+    <div id="trackingSection" class="hidden">
+      <div class="max-w-3xl mx-auto">
+        <!-- Back to Menu button -->
+        <button onclick="showSection('menu')" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-600 mb-6 transition-colors">
+          <i class="fa-solid fa-arrow-left"></i> Back to Menu
+        </button>
+
+        <!-- Search Order by Tracking Number Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col sm:flex-row gap-3">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-receipt absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" id="trackingInput" placeholder="Enter Order # (e.g. FE-88219)" 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+          </div>
+          <button onclick="trackOrderFromInput()" class="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-brand-500/20">
+            Track Order
+          </button>
+        </div>
+
+        <!-- Tracking Details Card -->
+        <div id="trackingCardContainer">
+          <!-- Injected dynamically -->
+        </div>
+
+        <!-- Recent Customer Orders List -->
+        <div class="mt-10">
+          <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Recent Orders
+          </h3>
+          <div id="recentOrdersList" class="space-y-3">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================= RESTAURANT ADMIN DASHBOARD ================= -->
+    <div id="adminSection" class="hidden">
+      <!-- Admin Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 mb-8">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-2.5 py-1 rounded-md border border-brand-200">Manager View</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Kitchen & Orders Dispatcher</h2>
+          <p class="text-sm text-slate-500">Monitor live orders, update cooking stages, and manage menu availability</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="loadAdminDashboard()" class="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh Data
+          </button>
+          <button onclick="showSection('menu')" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-md flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-arrow-left"></i> Customer Storefront
+          </button>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+            <span>TOTAL REVENUE</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i class="fa-solid fa-dollar-sign"></i>
+            </div>
+          </div>
+          <div id="statRevenue" class="text-2xl font-black text-slate-900">$0.00</div>
+          <span class="text-[11px] text-emerald-600 font-medium">All completed & in-flight</span>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+            <span>TOTAL ORDERS</span>
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+          </div>
+          <div id="statTotalOrders" class="text-2xl font-black text-slate-900">0</div>
+          <span class="text-[11px] text-slate-400 font-medium">Lifetime orders count</span>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+            <span>ACTIVE IN KITCHEN</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i class="fa-solid fa-fire-burner"></i>
+            </div>
+          </div>
+          <div id="statActiveOrders" class="text-2xl font-black text-amber-600">0</div>
+          <span class="text-[11px] text-amber-600 font-medium">Preparing or on route</span>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+            <span>DELIVERED</span>
+            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+          </div>
+          <div id="statDeliveredOrders" class="text-2xl font-black text-purple-600">0</div>
+          <span class="text-[11px] text-purple-600 font-medium">Successfully completed</span>
+        </div>
+      </div>
+
+      <!-- Live Orders Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-10">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <h3 class="font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Live Kitchen Order Queue
+          </h3>
+          <span class="text-xs text-slate-500">Click any action to change order status in real time</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="px-6 py-3.5">Order #</th>
+                <th class="px-6 py-3.5">Customer</th>
+                <th class="px-6 py-3.5">Items & Customizations</th>
+                <th class="px-6 py-3.5">Total Amount</th>
+                <th class="px-6 py-3.5">Current Status</th>
+                <th class="px-6 py-3.5 text-right">Quick Status Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminOrdersTableBody" class="divide-y divide-slate-100">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Menu Inventory & Availability Manager -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Menu Inventory & Instant Toggles</h3>
+            <p class="text-xs text-slate-500">Instantly toggle items in stock or out of stock</p>
+          </div>
+        </div>
+
+        <div id="adminMenuStockList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= SHOPPING CART DRAWER ================= -->
+  <div id="cartDrawerBackdrop" onclick="toggleCartDrawer(false)" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+  <aside id="cartDrawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out">
+    <!-- Header -->
+    <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-bag-shopping text-brand-500 text-lg"></i>
+        <h3 class="font-bold text-slate-900 text-lg">Your Delicious Bag</h3>
+      </div>
+      <button onclick="toggleCartDrawer(false)" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Items List -->
+    <div id="cartItemsContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
+      <!-- Populated dynamically -->
+    </div>
+
+    <!-- Coupon Input -->
+    <div class="px-6 py-3 bg-slate-50 border-t border-slate-200">
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-tag absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="couponInput" placeholder="Promo code (WELCOME50)" 
+            class="w-full pl-8 pr-3 py-2 text-xs uppercase font-mono rounded-lg border border-slate-200 focus:outline-none focus:border-brand-500">
+        </div>
+        <button onclick="applyCoupon()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition-all">
+          Apply
+        </button>
+      </div>
+      <div id="couponFeedback" class="mt-1 text-[11px] hidden"></div>
+    </div>
+
+    <!-- Summary & Checkout Footer -->
+    <div class="p-6 border-t border-slate-200 bg-white space-y-2.5">
+      <div class="flex justify-between text-xs text-slate-500">
+        <span>Subtotal</span>
+        <span id="cartSubtotal" class="font-semibold text-slate-700">$0.00</span>
+      </div>
+      <div id="couponDiscountRow" class="flex justify-between text-xs text-emerald-600 hidden">
+        <span class="flex items-center gap-1"><i class="fa-solid fa-tag text-[10px]"></i> Discount (<span id="appliedCouponLabel"></span>)</span>
+        <span id="cartDiscount" class="font-bold">-$0.00</span>
+      </div>
+      <div class="flex justify-between text-xs text-slate-500">
+        <span class="flex items-center gap-1">Delivery Fee <span id="freeDeliveryHint" class="text-[10px] text-amber-600 font-medium"></span></span>
+        <span id="cartDelivery" class="font-semibold text-slate-700">$0.00</span>
+      </div>
+      <div class="flex justify-between text-xs text-slate-500">
+        <span>Taxes & GST (5%)</span>
+        <span id="cartTax" class="font-semibold text-slate-700">$0.00</span>
+      </div>
+      <div class="pt-2 border-t border-slate-100 flex justify-between text-base font-extrabold text-slate-900">
+        <span>Grand Total</span>
+        <span id="cartTotal" class="text-brand-600">$0.00</span>
+      </div>
+
+      <button id="checkoutBtn" onclick="openCheckoutModal()" 
+        class="w-full mt-3 py-3.5 px-4 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]">
+        <span>Checkout Now</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= ITEM CUSTOMIZATION MODAL ================= -->
+  <div id="customizeModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200">
+      <div id="customizeModalContent">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CHECKOUT MODAL ================= -->
+  <div id="checkoutModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200 flex flex-col max-h-[90vh]">
+      
+      <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+        <div>
+          <h3 class="font-extrabold text-slate-900 text-lg">Complete Your Order</h3>
+          <p class="text-xs text-slate-500">Fast contactless delivery straight to your doorstep</p>
+        </div>
+        <button onclick="closeCheckoutModal()" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="checkoutForm" onsubmit="handlePlaceOrder(event)" class="overflow-y-auto p-6 space-y-5">
+        <!-- Contact Information -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+            <i class="fa-solid fa-user text-brand-500"></i> Contact Information
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
+              <input type="text" id="customerName" required placeholder="John Doe" 
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500" value="Alex Rivera">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Number *</label>
+              <input type="tel" id="customerPhone" required placeholder="+1 (555) 000-0000" 
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500" value="+1 (555) 345-6789">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
+              <input type="email" id="customerEmail" required placeholder="john@example.com" 
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500" value="alex.rivera@example.com">
+            </div>
+          </div>
+        </div>
+
+        <!-- Delivery Address -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+            <i class="fa-solid fa-location-dot text-brand-500"></i> Delivery Address
+          </h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Street Address & Apartment/Unit *</label>
+              <textarea id="deliveryAddress" required rows="2" placeholder="742 Evergreen Terrace, Apt 4B, Springfield" 
+                class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500">742 Evergreen Terrace, Apt 4B, Springfield</textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Delivery Notes (Optional)</label>
+              <input type="text" id="specialInstructions" placeholder="e.g. Ring bell, leave on table by porch" 
+                class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500" value="Ring bell and leave at door">
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+            <i class="fa-solid fa-credit-card text-brand-500"></i> Payment Method
+          </h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <label class="payment-method-label cursor-pointer border-2 border-brand-500 bg-brand-50/50 rounded-xl p-3 flex flex-col items-center justify-center text-center transition-all">
+              <input type="radio" name="paymentMethod" value="COD" checked class="hidden" onchange="selectPaymentMethod('COD')">
+              <i class="fa-solid fa-hand-holding-dollar text-emerald-600 text-lg mb-1"></i>
+              <span class="text-xs font-bold text-slate-800">Cash on Delivery</span>
+              <span class="text-[9px] text-emerald-600 font-semibold">Pay at Door</span>
+            </label>
+
+            <label class="payment-method-label cursor-pointer border border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center text-center hover:border-slate-300 transition-all">
+              <input type="radio" name="paymentMethod" value="RAZORPAY" class="hidden" onchange="selectPaymentMethod('RAZORPAY')">
+              <i class="fa-solid fa-bolt text-blue-600 text-lg mb-1"></i>
+              <span class="text-xs font-bold text-slate-800">Razorpay</span>
+              <span class="text-[9px] text-blue-500 font-semibold">Test Mode</span>
+            </label>
+
+            <label class="payment-method-label cursor-pointer border border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center text-center hover:border-slate-300 transition-all">
+              <input type="radio" name="paymentMethod" value="CARD" class="hidden" onchange="selectPaymentMethod('CARD')">
+              <i class="fa-solid fa-credit-card text-brand-600 text-lg mb-1"></i>
+              <span class="text-xs font-bold text-slate-800">Card</span>
+              <span class="text-[9px] text-slate-400 font-medium">Visa / Master</span>
+            </label>
+
+            <label class="payment-method-label cursor-pointer border border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center text-center hover:border-slate-300 transition-all">
+              <input type="radio" name="paymentMethod" value="UPI" class="hidden" onchange="selectPaymentMethod('UPI')">
+              <i class="fa-solid fa-mobile-screen-button text-purple-600 text-lg mb-1"></i>
+              <span class="text-xs font-bold text-slate-800">UPI / QR</span>
+              <span class="text-[9px] text-slate-400 font-medium">Instant Pay</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Total Breakdown in Checkout -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500">Total Payable</span>
+            <div id="checkoutPayableAmount" class="text-xl font-black text-brand-600">$0.00</div>
+          </div>
+          <button type="submit" id="placeOrderSubmitBtn" 
+            class="px-6 py-3 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-extrabold rounded-xl shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all">
+            <i class="fa-solid fa-lock text-xs"></i>
+            <span id="placeOrderBtnText">Confirm & Place Order</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= AUTH MODAL (LOGIN / REGISTER) ================= -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl transform scale-95 transition-transform duration-200">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-brand-500 text-white flex items-center justify-center text-sm shadow-sm">
+            <i class="fa-solid fa-fire"></i>
+          </div>
+          <h3 class="font-extrabold text-slate-900 text-base" id="authModalTitle">Welcome to FoodExpress</h3>
+        </div>
+        <button onclick="closeAuthModal()" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="flex border-b border-slate-200 bg-slate-50">
+        <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-3 text-xs font-bold border-b-2 border-brand-500 text-brand-600">
+          Sign In
+        </button>
+        <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-3 text-xs font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700">
+          Create Account
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+          <input type="email" id="loginEmail" required placeholder="alex.rivera@example.com" 
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500" value="alex.rivera@example.com">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" 
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500" value="password123">
+        </div>
+        <button type="submit" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl shadow-md text-xs transition-all">
+          Sign In to FoodExpress
+        </button>
+        <p class="text-[11px] text-center text-slate-400">Default demo: alex.rivera@example.com / password123</p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="p-6 space-y-3.5 hidden">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
+          <input type="text" id="regName" required placeholder="Jane Doe" 
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
+          <input type="email" id="regEmail" required placeholder="jane@example.com" 
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Password *</label>
+          <input type="password" id="regPassword" required placeholder="At least 6 characters" 
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+          <input type="tel" id="regPhone" placeholder="+1 (555) 000-0000" 
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Delivery Address</label>
+          <input type="text" id="regAddress" placeholder="Street, Apt, City" 
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-brand-500">
+        </div>
+        <button type="submit" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl shadow-md text-xs transition-all">
+          Create Account & Save Profile
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-8 text-center text-xs text-slate-400 mt-16">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2 text-slate-700 font-bold">
+        <i class="fa-solid fa-fire text-brand-500"></i> FoodExpress Gourmet Ordering System
+      </div>
+      <div>
+        Full-Stack Java 17 + Spring Boot 3.2 • MySQL 8.0 Database • Razorpay & COD Payments
+      </div>
+      <div class="flex items-center gap-4 text-slate-500">
+        <a href="#" onclick="showSection('admin'); return false;" class="hover:text-brand-600 transition-colors">Restaurant Admin</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
